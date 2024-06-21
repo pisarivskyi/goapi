@@ -8,11 +8,11 @@ import (
 type Server struct {
 	Addres string
 	Router *Router
-	Logger *logger
+	Logger *Logger
 }
 
 func NewServer(addres string) *Server {
-	return &Server{Addres: addres, Router: &Router{}, Logger: &logger{}}
+	return &Server{Addres: addres, Router: &Router{}, Logger: NewLogger()}
 }
 
 func (s *Server) Serve() {

@@ -2,64 +2,69 @@ package goapi
 
 import (
 	"fmt"
+	"io"
+	"os"
+	"strings"
 	"time"
 )
 
-type Level int16
-
-const (
-	InfoLevel    Level = 1
-	NoticeLevel  Level = 2
-	WarningLevel Level = 3
-	ErrorLevel   Level = 4
-	DebugLevel   Level = 5
-)
-
-const (
-	InfoColor    = "\033[1;34m%s\033[0m"
-	NoticeColor  = "\033[1;36m%s\033[0m"
-	WarningColor = "\033[1;33m%s\033[0m"
-	ErrorColor   = "\033[1;31m%s\033[0m"
-	DebugColor   = "\033[0;36m%s\033[0m"
-)
-
-type logger struct {
+type Logger struct {
+	output          io.Writer
+	allowedLevel    Level
+	timeStampFormat string
 }
 
-func (l Level) String() string {
-	switch l {
-	case InfoLevel:
-		return "[info]"
-	case NoticeLevel:
-		return "[notice]"
-	case ErrorLevel:
-		return "[error]"
-	default:
-		return ""
+func NewLogger() *Logger {
+	return &Logger{
+		output:          os.Stdout,
+		allowedLevel:    DebugLevel,
+		timeStampFormat: "02-Jan-2006 15:04:05.00",
 	}
 }
 
-func (logger) Info(msg string) {
-	printLog(msg, InfoLevel)
+func (l *Logger) Verbose(msg string, a ...any) {
+	l.writeLog(VerboseLevel, msg, a...)
 }
 
-func (logger) Error(msg string) {
-	printLog(msg, ErrorLevel)
+func (l *Logger) Debug(msg string, a ...any) {
+	l.writeLog(DebugLevel, msg, a...)
 }
 
-func printLog(msg string, l Level) {
-	fmt.Printf("%s %s: %s\n", time.Now().UTC().Format(time.DateTime), colorize(l.String(), l), msg)
+func (l *Logger) Info(msg string, a ...any) {
+	l.writeLog(InfoLevel, msg, a...)
 }
 
-func colorize(s string, l Level) string {
-	switch l {
-	case InfoLevel:
-		return fmt.Sprintf(InfoColor, s)
-	case NoticeLevel:
-		return fmt.Sprintf(NoticeColor, s)
-	case ErrorLevel:
-		return fmt.Sprintf(ErrorColor, s)
-	default:
-		return s
+func (l *Logger) Warning(msg string, a ...any) {
+	l.writeLog(WarningLevel, msg, a...)
+}
+
+func (l *Logger) Error(msg string, a ...any) {
+	l.writeLog(ErrorLevel, msg, a...)
+}
+
+func (l *Logger) writeLog(lvl Level, msg string, a ...any) {
+	if lvl >= l.allowedLevel {
+		color := lvl.Color()
+		timeStamp := time.Now().Format(l.timeStampFormat)
+		logLevel := colorize(lvl.String(), color)
+
+		sb := strings.Builder{}
+
+		sb.WriteString(
+			fmt.Sprintf("%s\t%s: %s\n", timeStamp, logLevel, colorize(msg, color)),
+		)
+
+		if len(a) > 0 {
+			for _, item := range a {
+				switch v := item.(type) {
+				case error:
+					sb.WriteString(colorize(fmt.Sprintf("%v\n", v.Error()), color))
+				default:
+					sb.WriteString(colorize(fmt.Sprintf("%v\n", v), color))
+				}
+			}
+		}
+
+		fmt.Fprint(l.output, sb.String())
 	}
 }
