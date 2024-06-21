@@ -4,43 +4,67 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"time"
 )
 
 type Logger struct {
-	Output       io.Writer
-	AllowedLevel Level
+	output          io.Writer
+	allowedLevel    Level
+	timeStampFormat string
 }
 
 func NewLogger() *Logger {
 	return &Logger{
-		Output:       os.Stdout,
-		AllowedLevel: DebugLevel,
+		output:          os.Stdout,
+		allowedLevel:    DebugLevel,
+		timeStampFormat: "02-Jan-2006 15:04:05.00",
 	}
 }
 
-func (l *Logger) Verbose(msg string) {
-	writeLog(l.Output, VerboseLevel, l.AllowedLevel, msg)
+func (l *Logger) Verbose(msg string, a ...any) {
+	l.writeLog(VerboseLevel, msg, a...)
 }
 
-func (l *Logger) Debug(msg string) {
-	writeLog(l.Output, DebugLevel, l.AllowedLevel, msg)
+func (l *Logger) Debug(msg string, a ...any) {
+	l.writeLog(DebugLevel, msg, a...)
 }
 
-func (l *Logger) Info(msg string) {
-	writeLog(l.Output, InfoLevel, l.AllowedLevel, msg)
+func (l *Logger) Info(msg string, a ...any) {
+	l.writeLog(InfoLevel, msg, a...)
 }
 
-func (l *Logger) Warning(msg string) {
-	writeLog(l.Output, WarningLevel, l.AllowedLevel, msg)
+func (l *Logger) Warning(msg string, a ...any) {
+	l.writeLog(WarningLevel, msg, a...)
 }
 
-func (l *Logger) Error(msg string) {
-	writeLog(l.Output, ErrorLevel, l.AllowedLevel, msg)
+func (l *Logger) Error(msg string, a ...any) {
+	l.writeLog(ErrorLevel, msg, a...)
 }
 
-func writeLog(w io.Writer, l Level, allowedLevel Level, msg string) {
-	if l >= allowedLevel {
-		fmt.Fprintf(w, "%s %s: %s\n", time.Now().UTC().Format(time.DateTime), colorize(l.String(), l.Color()), msg)
+func (l *Logger) writeLog(lvl Level, msg string, a ...any) {
+	if lvl >= l.allowedLevel {
+		color := lvl.Color()
+		timeStamp := time.Now().Format(l.timeStampFormat)
+		logLevel := colorize(lvl.String(), color)
+
+		sb := strings.Builder{}
+
+		sb.WriteString(
+			fmt.Sprintf("%s\t%s: %s\n", timeStamp, logLevel, colorize(msg, color)),
+		)
+
+		if len(a) > 0 {
+			for _, item := range a {
+				switch v := item.(type) {
+				case error:
+					sb.WriteString(colorize(fmt.Sprintf("%v\n", v.Error()), color))
+				default:
+					sb.WriteString(colorize(fmt.Sprintf("%v\n", v), color))
+				}
+			}
+		}
+
+		fmt.Fprint(l.output, sb.String())
 	}
 }

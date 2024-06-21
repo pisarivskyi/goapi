@@ -4,25 +4,25 @@ type Level int16
 
 // verbose, debug, warning, error
 const (
-	VerboseLevel Level = 1
-	DebugLevel   Level = 2
-	InfoLevel    Level = 3
-	WarningLevel Level = 4
-	ErrorLevel   Level = 5
+	VerboseLevel Level = 1 + iota
+	DebugLevel
+	InfoLevel
+	WarningLevel
+	ErrorLevel
 )
 
 func (l Level) String() string {
 	switch l {
 	case VerboseLevel:
-		return "[verbose]"
+		return "[VERBOSE]"
 	case DebugLevel:
-		return "[debug]"
+		return "[DEBUG]"
 	case InfoLevel:
-		return "[info]"
+		return "[INFO]"
 	case WarningLevel:
-		return "[warning]"
+		return "[WARNING]"
 	case ErrorLevel:
-		return "[error]"
+		return "[ERROR]"
 	default:
 		return ""
 	}
